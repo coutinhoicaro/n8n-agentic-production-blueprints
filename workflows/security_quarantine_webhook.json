@@ -1,0 +1,51 @@
+{
+  "name": "Edge Security Threat Ingestion & Dynamic Quarantine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "security-threat-webhook",
+        "responseMode": "onReceived"
+      },
+      "name": "Edge Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.reason }}",
+              "operation": "contains",
+              "value2": "PROBE"
+            }
+          ]
+        }
+      },
+      "name": "Threat Severity Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO security_audit_log (ip, threat_type, details, created_at) VALUES ($1, $2, $3, NOW());"
+      },
+      "name": "Audit Log Storage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [550, 200]
+    }
+  ],
+  "connections": {
+    "Edge Alert Webhook": {
+      "main": [[{"node": "Threat Severity Filter", "type": "main", "index": 0}]]
+    },
+    "Threat Severity Filter": {
+      "main": [[{"node": "Audit Log Storage", "type": "main", "index": 0}]]
+    }
+  }
+}
